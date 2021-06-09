@@ -166,7 +166,16 @@ func (h HeaderLine) ID() string {
 
 // AsVCFString returns the header line in the format expected in a VCF header.
 func (h HeaderLine) AsVCFString() string {
+	// The VCF specification is vague on whether the tags in a header line
+	// should appear in any particular order or what that order might be.
+	// This is problematic for testing as the tags are stored in a map and
+	// may appear in any order. Is there a single correct way to write every
+	// header or is it always ambiguous?
 	if h.Value == "" {
+		// if h.Key == "SAMPLE" {
+		// 	s, _ := sampleHeaderAsVCFString(h)
+		// 	return s
+		// }
 		var builder strings.Builder
 		builder.WriteString(fmt.Sprintf("##%s=<", h.Key))
 		pairs := []string{}
@@ -186,9 +195,14 @@ func (h HeaderLine) AsVCFString() string {
 		if ok {
 			pairs = append(pairs, fmt.Sprintf(`Description="%s"`, desc))
 		}
+		// It's not specified what order, if any, extra tags should be in.
 		for k, v := range h.mapping {
 			if k != "ID" && k != "Number" && k != "Type" && k != "Description" {
-				if h.Key == "contig" && k == "length" {
+				// It is not specified in the spec whether
+				// contig field values should be quoted or not,
+				// but all files I have access to do not quote
+				// the values.
+				if h.Key == "contig" {
 					// Should not be quoted
 					pairs = append(pairs, fmt.Sprintf(`%s=%s`, k, v))
 				} else {
@@ -202,6 +216,29 @@ func (h HeaderLine) AsVCFString() string {
 	}
 	return fmt.Sprintf("##%s=%s", h.Key, h.Value)
 }
+
+// the examples in v4.3 specs use completely different tags (Assay, Ethnicity
+// and Disease). I can only conclude they are completely generic and a user can
+// put whatever they want in a SAMPLE header line.
+// func sampleHeaderAsVCFString(h HeaderLine) (string, error) {
+// 	ids, ok := h.mapping["ID"]
+// 	if !ok {
+// 		return "", fmt.Errorf("SAMPLE header line has no ID tag")
+// 	}
+// 	genomes, ok := h.mapping["Genomes"]
+// 	if !ok {
+// 		return "", fmt.Errorf("SAMPLE header line has no Genomes tag")
+// 	}
+// 	mixture, ok := h.mapping["Mixture"]
+// 	if !ok {
+// 		return "", fmt.Errorf("SAMPLE header line has no Mixture tag")
+// 	}
+// 	description, ok := h.mapping["Description"]
+// 	if !ok {
+// 		return "", fmt.Errorf("SAMPLE header line has no Description tag")
+// 	}
+// 	return fmt.Sprintf(`##SAMPLE=<ID=%s,Genomes=%s,Mixture=%s,Description="%s">`, ids, genomes, mixture, description), nil
+// }
 
 // NewSimpleHeaderLine creates a "simple" header line: one with just a key and
 // value.
@@ -222,11 +259,48 @@ func parseHeaderLine(s string) (HeaderLine, error) {
 		return HeaderLine{}, fmt.Errorf("malformed header line")
 	}
 	headerKey := match[1]
-	mapping, err := parseValues(s)
-	if err != nil {
-		return HeaderLine{}, fmt.Errorf("failed to parse header line: %w", err)
+	value := ""
+	var mapping map[string]string
+	if strings.Contains(s, "<") {
+		var err error
+		if !strings.Contains(s, ">") {
+			return HeaderLine{}, fmt.Errorf("header line is malformed: %s", s)
+		}
+		mapping, err = parseValues(s)
+		if err != nil {
+			return HeaderLine{}, fmt.Errorf("failed to parse header line: %w", err)
+		}
+		switch headerKey {
+		case "contig":
+			_, ok := mapping["ID"]
+			if !ok {
+				return HeaderLine{}, fmt.Errorf("%s header line must contain an ID tag", headerKey)
+			}
+		case "FILTER", "ALT":
+			err := checkTags(mapping, []string{"ID", "Description"})
+			if err != nil {
+				return HeaderLine{}, fmt.Errorf("failed to parse header line: %w", err)
+			}
+		case "FORMAT", "INFO":
+			err := checkTags(mapping, []string{"ID", "Number", "Type", "Description"})
+			if err != nil {
+				return HeaderLine{}, fmt.Errorf("failed to parse header line: %w", err)
+			}
+		}
+	} else {
+		value = strings.SplitN(s, "=", 2)[1]
 	}
-	return HeaderLine{headerKey, "", mapping}, nil
+	return HeaderLine{headerKey, value, mapping}, nil
+}
+
+func checkTags(mapping map[string]string, requiredTags []string) error {
+	for _, tag := range requiredTags {
+		_, ok := mapping[tag]
+		if !ok {
+			return fmt.Errorf("required tag %s is missing", tag)
+		}
+	}
+	return nil
 }
 
 // A little switch machine to parse out the tags: thanks htsjdk team!
