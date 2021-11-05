@@ -89,7 +89,21 @@ func (v Variant) AttributeAsFloat64(key string) (float64, error) {
 // }
 
 func (v Variant) IsFiltered() bool {
-	return len(v.Filter) == 0 || (len(v.Filter) == 1 && stringSliceContains(v.Filter, "PASS"))
+	switch len(v.Filter) {
+	case 0:
+		return false
+	case 1:
+		if v.Filter[0] == "PASS" || v.Filter[0] == "." {
+			return false
+		}
+		return true
+	default:
+		return true
+	}
+}
+
+func (v Variant) IsNotFiltered() bool {
+	return !v.IsFiltered()
 }
 
 func (v Variant) Type() Type {
@@ -227,6 +241,12 @@ func parseVcfLine(line string, samples []string) (Variant, error) {
 			info[bits[0]] = "1"
 		}
 	}
+	// filter := []string{}
+	// for _, i := range strings.Split(bits[6], ";") {
+	// 	if i != "PASS" && i != "." {
+	// 		filter = append(filter, i)
+	// 	}
+	// }
 	vc := Variant{
 		Chrom:  bits[0],
 		Pos:    pos,
