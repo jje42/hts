@@ -1,6 +1,7 @@
 package vcf
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -53,6 +54,9 @@ func NewGenotype(name string, attributes map[string]string) (Genotype, error) {
 func (g Genotype) Alleles() ([]string, error) {
 	xs := []string{}
 	alleles := g.v.Alleles()
+	if len(g.alleleIndexes) == 0 {
+		return []string{}, errors.New("genotype has no alleles")
+	}
 	for _, i := range g.alleleIndexes {
 		if len(alleles) < i+1 {
 			return []string{}, fmt.Errorf("GT has index %d, but the variant only has %d alleles", i, len(alleles))
