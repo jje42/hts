@@ -35,6 +35,10 @@ func NewGenotype(name string, attributes map[string]string) (Genotype, error) {
 				g.phased = true
 			}
 			for _, istr := range strings.Split(gt, sep) {
+				// TSO500 is outputting strange calls, for example, 1/.
+				if istr == "." {
+					continue
+				}
 				i, err := strconv.Atoi(istr)
 				if err != nil {
 					return Genotype{}, fmt.Errorf("unable to convert %s to int: %w", istr, err)
