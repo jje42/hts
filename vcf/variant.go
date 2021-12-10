@@ -89,7 +89,83 @@ func (v Variant) AttributeAsFloat64(key string) (float64, error) {
 // }
 
 func (v Variant) IsFiltered() bool {
-	return !(len(v.Filter) == 0 || (len(v.Filter) == 1 && (v.Filter[0] == "PASS" || v.Filter[0] == ".")))
+	switch len(v.Filter) {
+	case 0:
+		return false
+	case 1:
+		if v.Filter[0] == "PASS" || v.Filter[0] == "." {
+			return false
+		}
+		return true
+	default:
+		return true
+	}
+}
+
+func (v Variant) IsNotFiltered() bool {
+	return !v.IsFiltered()
+}
+
+func (v Variant) Type() Type {
+	if len(v.Alt) == 0 {
+		return NO_VARIATION
+	}
+	t := biallelicType(v.Ref, v.Alt[0])
+	for _, alt := range v.Alt[1:] {
+		bt := biallelicType(v.Ref, alt)
+		if bt != t {
+			return MIXED
+		}
+	}
+	return t
+}
+
+// Type is a type of variation.
+type Type int
+
+const (
+	// NO_VARIATION
+	NO_VARIATION Type = iota
+	// SNP ...
+	SNP
+	// MNP ...
+	MNP
+	// INDEL ...
+	INDEL
+	// SYMBOLIC ...
+	SYMBOLIC
+	// MIXED ...
+	MIXED
+)
+
+func biallelicType(ref, alt string) Type {
+	if containsAny(alt, []string{"*", "<", "[", "]", "."}) {
+		return SYMBOLIC
+	}
+	if len(ref) == len(alt) {
+		if len(alt) == 1 {
+			return SNP
+		}
+		return MNP
+	}
+	return INDEL
+}
+
+func containsAny(s string, set []string) bool {
+	for _, i := range set {
+		if strings.Contains(s, i) {
+			return true
+		}
+	}
+	return false
+}
+
+func (v Variant) IsSNP() bool {
+	return v.Type() == SNP
+}
+
+func (v Variant) IsINDEL() bool {
+	return v.Type() == INDEL
 }
 
 // Type()
@@ -165,6 +241,12 @@ func parseVcfLine(line string, samples []string) (Variant, error) {
 			info[bits[0]] = "1"
 		}
 	}
+	// filter := []string{}
+	// for _, i := range strings.Split(bits[6], ";") {
+	// 	if i != "PASS" && i != "." {
+	// 		filter = append(filter, i)
+	// 	}
+	// }
 	vc := Variant{
 		Chrom:  bits[0],
 		Pos:    pos,

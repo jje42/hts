@@ -1,6 +1,7 @@
 package vcf
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -27,6 +28,13 @@ func NewGenotype(name string, attributes map[string]string) (Genotype, error) {
 	// that it must be the first field if present.
 	gt, ok := attributes["GT"]
 	if ok {
+		// The TSO500 Local App puts these non-standard genotypes in its
+		// output. There appear when all reads in the AD count support
+		// the alt allele but the DP is higher. Presumably some reads
+		// are filtered.
+		if gt == "1/." {
+			gt = "1/1"
+		}
 		// Only attempt to convert the indexes if they are not no-calls. What about non-diplody organisms.
 		if gt != "./." && gt != ".|." && gt != "." {
 			sep := "/"
@@ -57,6 +65,9 @@ func NewGenotype(name string, attributes map[string]string) (Genotype, error) {
 func (g Genotype) Alleles() ([]string, error) {
 	xs := []string{}
 	alleles := g.v.Alleles()
+	if len(g.alleleIndexes) == 0 {
+		return []string{}, errors.New("genotype has no alleles")
+	}
 	for _, i := range g.alleleIndexes {
 		if len(alleles) < i+1 {
 			return []string{}, fmt.Errorf("GT has index %d, but the variant only has %d alleles", i, len(alleles))
