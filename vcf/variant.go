@@ -89,7 +89,7 @@ func (v Variant) AttributeAsFloat64(key string) (float64, error) {
 // }
 
 func (v Variant) IsFiltered() bool {
-	return len(v.Filter) == 0 || (len(v.Filter) == 1 && stringSliceContains(v.Filter, "PASS"))
+	return !(len(v.Filter) == 0 || (len(v.Filter) == 1 && (v.Filter[0] == "PASS" || v.Filter[0] == ".")))
 }
 
 // Type()
