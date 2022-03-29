@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/brentp/faidx"
-	"github.com/jje42/retained-introns/seq"
+	"github.com/jje42/hts/seq"
 )
 
 type Feature struct {
