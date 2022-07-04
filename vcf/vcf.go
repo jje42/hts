@@ -45,6 +45,17 @@ func NewScanner(v VCF, loc ...string) (*Scanner, error) {
 	return s, nil
 }
 
+func NewScannerFromCommand(cmd *exec.Cmd, loc ...string) (*Scanner, error) {
+	var err error
+	s := &Scanner{}
+	s.cmd = cmd
+	s.stdout, err = s.cmd.StdoutPipe()
+	if err != nil {
+		return s, err
+	}
+	return s, nil
+}
+
 func (s *Scanner) Scan() bool {
 	if s.done {
 		return false

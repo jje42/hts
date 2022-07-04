@@ -70,7 +70,13 @@ func New(r io.Reader) (*GTF, error) {
 				if err != nil {
 					return nil, fmt.Errorf("failed to unquote attribute: %w", err)
 				}
-				m[key] = s
+				// Ensembl's GTF can have multiple "tag" keys
+				// in feature attributes.
+				if _, ok := m[key]; ok {
+					m[key] = m[key] + ";" + s
+				} else {
+					m[key] = s
+				}
 			}
 			f := &Feature{
 				Seqname:   bits[0],
