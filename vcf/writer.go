@@ -24,7 +24,11 @@ func NewWriter(f string) (*Writer, error) {
 	if strings.HasSuffix(f, ".bcf") {
 		format = "b"
 	}
-	cmd := exec.Command("bcftools", "view", "--no-version", "-O", format, "-o", f)
+	exe, err := findBcftools()
+	if err != nil {
+		return nil, err
+	}
+	cmd := exec.Command(exe, "view", "--no-version", "-O", format, "-o", f)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return &Writer{}, fmt.Errorf("failed to create stdin pipe: %w", err)

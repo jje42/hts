@@ -2,9 +2,12 @@ package vcf
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
+	"path/filepath"
 )
 
 type VCF struct {
@@ -34,10 +37,32 @@ type Scanner struct {
 	done       bool
 }
 
+func findBcftools() (string, error) {
+	exe, err := exec.LookPath("bcftools")
+	if err != nil {
+		// PBS Pro doesn't set the PATH to the same as a login shell.
+		// Even if bcftools is in the same directory as tso and it's on
+		// PATH, we may still not find it with LookPath.
+		this, err := os.Executable()
+		if err != nil {
+			return "", errors.New("cannot get executable path")
+		}
+		exe = filepath.Join(filepath.Dir(this), "bcftools")
+		if _, err := os.Stat(exe); errors.Is(err, os.ErrNotExist) {
+			return "", errors.New("unable to find bcftools binary")
+		}
+	}
+	return exe, nil
+}
+
 func NewScanner(v VCF, loc ...string) (*Scanner, error) {
 	var err error
 	s := &Scanner{vcf: v}
-	s.cmd = exec.Command("bcftools", "view", "-H", v.file)
+	exe, err := findBcftools()
+	if err != nil {
+		return nil, err
+	}
+	s.cmd = exec.Command(exe, "view", "-H", v.file)
 	s.stdout, err = s.cmd.StdoutPipe()
 	if err != nil {
 		return s, err

@@ -91,11 +91,11 @@ func readHeaderFromFile(path string) (Header, error) {
 	if _, err := os.Stat(path); err != nil {
 		return Header{}, fmt.Errorf("can not stat file: %w", err)
 	}
-	_, err := exec.LookPath("bcftools")
+	exe, err := findBcftools()
 	if err != nil {
-		return Header{}, fmt.Errorf("can not find bcftools on PATH: %v", err)
+		return Header{}, err
 	}
-	cmd := exec.Command("bcftools", "view", "--no-version", "-h", path)
+	cmd := exec.Command(exe, "view", "--no-version", "-h", path)
 	bs, err := cmd.Output()
 	if err != nil {
 		return Header{}, fmt.Errorf("process failed: %v", err)
