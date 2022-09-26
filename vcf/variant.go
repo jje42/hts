@@ -176,7 +176,7 @@ func (v Variant) IsINDEL() bool {
 
 func (v *Variant) AddGenotype(g Genotype) error {
 	// We could addtionally validate the values match the expectation of the
-	// header, but we don't have access to the header here.
+	// header, but we do not have access to the header here.
 	g.v = v // set the correct reference
 	if len(g.values) > len(v.Format) {
 		return fmt.Errorf("genotypes contains tags not listed in variant FORMAT field")
@@ -233,28 +233,33 @@ func parseVcfLine(line string, samples []string) (Variant, error) {
 		return Variant{}, fmt.Errorf("unable to convert position: %w", err)
 	}
 	info := make(map[string]string)
-	for _, i := range strings.Split(bits[7], ";") {
-		bits := strings.SplitN(i, "=", 2)
-		if len(bits) == 2 {
-			info[bits[0]] = bits[1]
-		} else {
-			info[bits[0]] = "1"
+	// A '.' in the INFO column indicates that there are no fields, do not
+	// add this to the map!
+	if bits[7] != "." {
+		for _, i := range strings.Split(bits[7], ";") {
+			bits := strings.SplitN(i, "=", 2)
+			if len(bits) == 2 {
+				info[bits[0]] = bits[1]
+			} else {
+				info[bits[0]] = "1"
+			}
 		}
 	}
-	// filter := []string{}
-	// for _, i := range strings.Split(bits[6], ";") {
-	// 	if i != "PASS" && i != "." {
-	// 		filter = append(filter, i)
-	// 	}
-	// }
+	filter := []string{}
+	for _, i := range strings.Split(bits[6], ";") {
+		if i != "PASS" && i != "." {
+			filter = append(filter, i)
+		}
+	}
 	vc := Variant{
-		Chrom:  bits[0],
-		Pos:    pos,
-		ID:     bits[2],
-		Ref:    bits[3],
-		Alt:    strings.Split(bits[4], ","),
-		Qual:   bits[5],
-		Filter: strings.Split(bits[6], ";"),
+		Chrom: bits[0],
+		Pos:   pos,
+		ID:    bits[2],
+		Ref:   bits[3],
+		Alt:   strings.Split(bits[4], ","),
+		Qual:  bits[5],
+		// Filter: strings.Split(bits[6], ";"),
+		Filter: filter,
 		Info:   info,
 	}
 	if len(bits) >= 9 {

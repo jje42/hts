@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 type VCF struct {
@@ -114,4 +115,21 @@ func (s *Scanner) Err() error {
 		return s.err
 	}
 	return s.scanner.Err()
+}
+
+func CreateIndex(f string) error {
+	if strings.HasSuffix(f, ".vcf") {
+		return errors.New("cannot index uncompressed VCF file")
+	}
+	exe, err := findBcftools()
+	if err != nil {
+		return err
+	}
+	var cmd *exec.Cmd
+	if strings.HasSuffix(f, ".vcf.gz") {
+		cmd = exec.Command(exe, "index", "-t", f)
+	} else {
+		cmd = exec.Command(exe, "index", f)
+	}
+	return cmd.Run()
 }
