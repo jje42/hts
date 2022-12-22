@@ -91,7 +91,10 @@ func (s *Scanner) Scan() bool {
 			s.err = err
 			return false
 		}
+
 		s.scanner = bufio.NewScanner(s.stdout)
+    buf := make([]byte, 0, 100000)
+    s.scanner.Buffer(buf, 100000)
 		s.scanCalled = true
 	}
 	for s.scanner.Scan() {
