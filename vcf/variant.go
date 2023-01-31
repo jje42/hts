@@ -1,6 +1,7 @@
 package vcf
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -221,6 +222,21 @@ func (v Variant) AsVCFLine() string {
 		}
 	}
 	return strings.Join(cols, "\t")
+}
+
+func (v Variant) CsqKeys() ([]string, error) {
+	for _, i := range v.header.Infos() {
+		if i.ID() != "CSQ" {
+			continue
+		}
+		return parseCsq(i.Get("Description")), nil
+	}
+	return []string{}, errors.New("no CSQ INFO record in VCF header")
+}
+
+func parseCsq(s string) []string {
+	s = strings.TrimPrefix(s, "Consequence annotations from Ensembl VEP. Format: ")
+	return strings.Split(s, "|")
 }
 
 func parseVcfLine(line string, samples []string) (Variant, error) {

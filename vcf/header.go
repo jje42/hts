@@ -164,6 +164,10 @@ func (h HeaderLine) ID() string {
 	return h.mapping["ID"]
 }
 
+func (h HeaderLine) Get(id string) string {
+	return h.mapping[id]
+}
+
 // AsVCFString returns the header line in the format expected in a VCF header.
 func (h HeaderLine) AsVCFString() string {
 	// The VCF specification is vague on whether the tags in a header line
