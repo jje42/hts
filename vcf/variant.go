@@ -225,6 +225,9 @@ func (v Variant) AsVCFLine() string {
 }
 
 func (v Variant) CsqKeys() ([]string, error) {
+	if v.header == nil {
+		panic("missing header in VCF")
+	}
 	for _, i := range v.header.Infos() {
 		if i.ID() != "CSQ" {
 			continue

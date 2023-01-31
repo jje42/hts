@@ -93,8 +93,8 @@ func (s *Scanner) Scan() bool {
 		}
 
 		s.scanner = bufio.NewScanner(s.stdout)
-    buf := make([]byte, 0, 100000)
-    s.scanner.Buffer(buf, 100000)
+		buf := make([]byte, 0, 100000)
+		s.scanner.Buffer(buf, 100000)
 		s.scanCalled = true
 	}
 	for s.scanner.Scan() {
@@ -103,6 +103,7 @@ func (s *Scanner) Scan() bool {
 			s.err = err
 			return false
 		}
+		token.header = &s.vcf.Header
 		s.token = token
 		return true
 	}
