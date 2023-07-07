@@ -3,6 +3,7 @@ package fasta
 import (
 	"bufio"
 	"io"
+	"strings"
 )
 
 type Record struct {
@@ -35,13 +36,14 @@ func (s *Scanner) Scan() bool {
 		}
 		if line[0] == '>' {
 			if s.rec == nil {
-				s.rec = &Record{Header: line[1:]}
+				s.rec = &Record{Header: strings.TrimSpace(line[1:])}
 			} else {
-				s.nextHeader = line[1:]
+				s.nextHeader = strings.TrimSpace(line[1:])
 				return true
 			}
+			continue
 		}
-		s.rec.Sequence += line
+		s.rec.Sequence += strings.TrimSpace(line)
 	}
 }
 
